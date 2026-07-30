@@ -1,0 +1,9 @@
+# Archivos de VS Code
+.vscode/
+
+# Carpeta de borradores y archivos de desarrollo previos
+dist/_archive/
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
