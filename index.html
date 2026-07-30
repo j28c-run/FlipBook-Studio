@@ -15,11 +15,40 @@
         <div class="brand-icon">FS</div>
         <span class="brand-title">Flipbook Studio Pro</span>
 
+        <!-- Nav Menus with Dropdowns -->
         <nav class="menu-nav">
-          <span class="menu-nav-item">File</span>
-          <span class="menu-nav-item">Edit</span>
-          <span class="menu-nav-item">Project</span>
-          <span class="menu-nav-item">Tools</span>
+          <div class="menu-nav-item" id="menu-file">File
+            <div class="dropdown-menu" id="dropdown-file">
+              <div class="dropdown-item" onclick="document.getElementById('file-input').click()">Cargar Medios... <span class="dropdown-shortcut">Ctrl+O</span></div>
+              <div class="dropdown-item" id="menu-item-export">Exportar Video WebM... <span class="dropdown-shortcut">Ctrl+E</span></div>
+              <div class="dropdown-item" id="menu-item-clear">Limpiar Proyecto <span class="dropdown-shortcut">Shift+Del</span></div>
+            </div>
+          </div>
+
+          <div class="menu-nav-item" id="menu-edit">Edit
+            <div class="dropdown-menu" id="dropdown-edit">
+              <div class="dropdown-item" id="menu-item-duplicate">Duplicar Fotograma <span class="dropdown-shortcut">Ctrl+D</span></div>
+              <div class="dropdown-item" id="menu-item-reverse">Invertir Secuencia <span class="dropdown-shortcut">Ctrl+R</span></div>
+              <div class="dropdown-item" id="menu-item-delete">Eliminar Fotograma <span class="dropdown-shortcut">Del</span></div>
+            </div>
+          </div>
+
+          <div class="menu-nav-item" id="menu-project">Project
+            <div class="dropdown-menu" id="dropdown-project">
+              <div class="dropdown-item" id="preset-16-9">📺 Guía 16:9 (1920x1080)</div>
+              <div class="dropdown-item" id="preset-9-16">📱 Guía 9:16 (1080x1920)</div>
+              <div class="dropdown-item" id="preset-1-1">🔲 Guía 1:1 (1080x1080)</div>
+              <div class="dropdown-item" id="preset-orig">📐 Guía Original</div>
+            </div>
+          </div>
+
+          <div class="menu-nav-item" id="menu-tools">Tools
+            <div class="dropdown-menu" id="dropdown-tools">
+              <div class="dropdown-item" id="tool-item-reverse">Invertir Secuencia Completa</div>
+              <div class="dropdown-item" id="tool-item-duplicate">Clonar Fotograma Activo</div>
+            </div>
+          </div>
+
           <span class="menu-nav-item">View</span>
           <span class="menu-nav-item">Help</span>
         </nav>
@@ -44,19 +73,19 @@
     <div class="studio-workspace">
       <!-- Left Tools Strip Toolbar -->
       <aside class="tools-strip">
-        <button class="tool-btn active" title="Selección">
+        <button class="tool-btn active" id="btn-tool-select" title="Selección">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3l7 18 3-7 7-3L3 3z"/></svg>
         </button>
-        <button class="tool-btn" title="Recorte">
+        <button class="tool-btn" id="btn-tool-crop" title="Recorte / Aspect Ratio">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 2v14a2 2 0 002 2h14M18 22V8a2 2 0 00-2-2H2"/></svg>
         </button>
-        <button class="tool-btn" title="Pincel">
+        <button class="tool-btn" id="btn-tool-brush" title="Pincel / Anotar">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 19l7-7 3 3-7 7-3-3zM18 13l-1.5-1.5M2 22l5-1 10-10-4-4L3 17l-1 5z"/></svg>
         </button>
-        <button class="tool-btn" title="Efectos">
+        <button class="tool-btn" id="btn-tool-effects" title="Efectos Visuales">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
         </button>
-        <button class="tool-btn" title="Ajustes">
+        <button class="tool-btn" id="btn-tool-adjust" title="Ajustes de Color">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"/></svg>
         </button>
       </aside>
@@ -66,6 +95,7 @@
         <div class="stage-viewport" id="stage-viewport">
           <div id="canvas-container"></div>
           <video id="video-overlay" playsinline></video>
+          <canvas id="annotation-canvas"></canvas>
 
           <!-- Framing Corner Handles -->
           <div class="frame-guides" id="frame-guides">
@@ -76,7 +106,7 @@
           </div>
 
           <div class="frame-guide-info">
-            <span>Frame guide: 1920×1080</span>
+            <span id="guide-res-label">Frame guide: 1920×1080</span>
             <span id="guide-frame-counter">Frame: 0 / 0</span>
           </div>
 
@@ -91,16 +121,43 @@
             <button class="btn-glass-add" onclick="document.getElementById('file-input').click()">Añadir Archivo +</button>
             <input type="file" id="file-input" multiple accept="image/*,video/*" style="display:none;" />
           </div>
+
+          <!-- Floating Effects Panel -->
+          <div class="floating-tool-panel" id="panel-effects">
+            <span class="tool-panel-title">Filtros:</span>
+            <button class="effect-preset-btn active" data-filter="none">Normal</button>
+            <button class="effect-preset-btn" data-filter="bw">B&W</button>
+            <button class="effect-preset-btn" data-filter="sepia">Sepia</button>
+            <button class="effect-preset-btn" data-filter="vivid">Vivid</button>
+            <button class="effect-preset-btn" data-filter="contrast">Contrast</button>
+          </div>
+
+          <!-- Floating Adjust Panel -->
+          <div class="floating-tool-panel" id="panel-adjust">
+            <span class="tool-panel-title">Ajustes:</span>
+            <div class="slider-adjust-group">
+              <label>Brillo:</label>
+              <input type="range" id="slider-brightness" min="50" max="150" value="100" />
+            </div>
+            <div class="slider-adjust-group">
+              <label>Contraste:</label>
+              <input type="range" id="slider-contrast" min="50" max="150" value="100" />
+            </div>
+            <div class="slider-adjust-group">
+              <label>Saturación:</label>
+              <input type="range" id="slider-saturate" min="0" max="200" value="100" />
+            </div>
+          </div>
         </div>
 
         <!-- Quick Tools Bar below Canvas -->
         <div class="canvas-quick-tools">
-          <button class="quick-tool-pill active">Selection</button>
-          <button class="quick-tool-pill">Crop</button>
-          <button class="quick-tool-pill">Brush</button>
-          <button class="quick-tool-pill">Effects</button>
-          <button class="quick-tool-pill">Adjust</button>
-          <button class="quick-tool-pill">Properties ▾</button>
+          <button class="quick-tool-pill active" id="pill-select">Selection</button>
+          <button class="quick-tool-pill" id="pill-crop">Crop</button>
+          <button class="quick-tool-pill" id="pill-brush">Brush</button>
+          <button class="quick-tool-pill" id="pill-effects">Effects</button>
+          <button class="quick-tool-pill" id="pill-adjust">Adjust</button>
+          <button class="quick-tool-pill" id="pill-properties">Properties ▾</button>
         </div>
       </main>
 
@@ -168,7 +225,7 @@
             <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
           </button>
           
-          <button class="control-icon-btn" id="btn-loop" title="Bucle">
+          <button class="control-icon-btn active" id="btn-loop" title="Bucle">
             <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
           </button>
         </div>
@@ -181,6 +238,29 @@
         </div>
       </div>
     </footer>
+  </div>
+
+  <!-- Studio Export Modal -->
+  <div class="export-modal-backdrop" id="export-modal">
+    <div class="export-modal-card">
+      <div class="export-modal-title">
+        <span>Exportar Animación</span>
+        <button class="export-modal-close" id="btn-close-export">&times;</button>
+      </div>
+
+      <div class="export-options-grid">
+        <div class="export-opt-card active" id="opt-webm">
+          <div class="export-opt-title">Video WebM</div>
+          <div class="export-opt-desc">Video animado en alta calidad</div>
+        </div>
+        <div class="export-opt-card" id="opt-zip">
+          <div class="export-opt-title">Fotogramas (PNG)</div>
+          <div class="export-opt-desc">Descarga las imágenes individuales</div>
+        </div>
+      </div>
+
+      <button class="btn-export-confirm" id="btn-confirm-export">Compilar y Descargar</button>
+    </div>
   </div>
 
   <!-- Required WebGL & GSAP Libraries -->

@@ -1,5 +1,5 @@
 /**
- * Flipbook Studio Pro v2 Engine
+ * Flipbook Studio Pro v2 Engine - Complete Interactive Version
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -41,23 +41,33 @@ document.addEventListener('DOMContentLoaded', () => {
   let isPlaying = false;
   let playbackInterval = null;
   let fpsRates = [24, 12, 5, 1];
-  let fpsIndex = 0; // Starts at 24 FPS
+  let fpsIndex = 0; // 24 FPS
   let speedMs = Math.round(1000 / 24);
   let isLoop = true;
   let transitionMode = 'instant'; // 'instant' | 'fade' | 'liquid'
+  let currentAspectRatio = '16:9';
+
+  // Adjustment Filters State
+  let filterState = {
+    preset: 'none',
+    brightness: 100,
+    contrast: 100,
+    saturate: 100
+  };
 
   // --- DOM Elements ---
   const canvasContainer = document.getElementById('canvas-container');
   const videoOverlay = document.getElementById('video-overlay');
+  const annotationCanvas = document.getElementById('annotation-canvas');
   const emptyGlassModal = document.getElementById('empty-glass-modal');
   const activeFrameBadgeWrap = document.getElementById('active-frame-badge-wrap');
   const badgeFrameNum = document.getElementById('badge-frame-num');
   const guideFrameCounter = document.getElementById('guide-frame-counter');
+  const guideResLabel = document.getElementById('guide-res-label');
   const selectTransition = document.getElementById('select-transition');
 
   const scrubberTrack = document.getElementById('scrubber-track');
   const scrubberProgress = document.getElementById('scrubber-progress');
-  const scrubNeedle = document.getElementById('scrub-needle');
 
   const btnPlay = document.getElementById('btn-play');
   const playIconPath = document.getElementById('play-icon-path');
@@ -71,7 +81,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const fileInput = document.getElementById('file-input');
   const assetsGrid = document.getElementById('assets-grid');
 
-  // --- Three.js Setup ---
+  // Interactive Tools & Panels
+  const panelEffects = document.getElementById('panel-effects');
+  const panelAdjust = document.getElementById('panel-adjust');
+  const exportModal = document.getElementById('export-modal');
+  const btnExport = document.getElementById('btn-export');
+  const btnCloseExport = document.getElementById('btn-close-export');
+  const btnConfirmExport = document.getElementById('btn-confirm-export');
+
+  // --- WebGL Engine Setup ---
   let scene, camera, renderer, mat, geometry, object;
 
   function initWebGL() {
@@ -124,28 +142,38 @@ document.addEventListener('DOMContentLoaded', () => {
       if (mediaList[currentIndex] && mediaList[currentIndex].texture) {
         fitAspect(mediaList[currentIndex].texture);
       }
+      resizeAnnotationCanvas();
     });
+
+    initAnnotationCanvas();
   }
 
-  // Preserve Image Aspect Ratio
+  // --- Aspect Ratio Fitting Engine ---
   function fitAspect(texture) {
     if (!texture || !texture.image) return;
     const container = document.getElementById('stage-viewport');
     const containerW = container.clientWidth || window.innerWidth;
     const containerH = container.clientHeight || window.innerHeight;
 
-    const imgW = texture.image.width || containerW;
-    const imgH = texture.image.height || containerH;
-    const containerAspect = containerW / containerH;
-    const imgAspect = imgW / imgH;
+    let targetRatio = containerW / containerH;
+    if (currentAspectRatio === '16:9') targetRatio = 16 / 9;
+    else if (currentAspectRatio === '9:16') targetRatio = 9 / 16;
+    else if (currentAspectRatio === '1:1') targetRatio = 1;
+    else if (currentAspectRatio === 'orig') {
+      const imgW = texture.image.width || containerW;
+      const imgH = texture.image.height || containerH;
+      targetRatio = imgW / imgH;
+    }
 
     let planeW, planeH;
-    if (imgAspect > containerAspect) {
-      planeW = containerW * 0.88;
-      planeH = (containerW * 0.88) / imgAspect;
+    const stageAspect = containerW / containerH;
+
+    if (targetRatio > stageAspect) {
+      planeW = containerW * 0.86;
+      planeH = (containerW * 0.86) / targetRatio;
     } else {
-      planeH = containerH * 0.84;
-      planeW = (containerH * 0.84) * imgAspect;
+      planeH = containerH * 0.82;
+      planeW = (containerH * 0.82) * targetRatio;
     }
 
     object.geometry.dispose();
@@ -285,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
     isDraggingScrubber = false;
   });
 
-  // --- Playback Controls ---
+  // --- Playback Engine ---
   function play() {
     if (mediaList.length === 0) return;
     isPlaying = true;
@@ -327,27 +355,251 @@ document.addEventListener('DOMContentLoaded', () => {
     goToSlide(prevIdx);
   }
 
-  // FPS Rate Toggle Button
-  btnFpsToggle.addEventListener('click', () => {
-    fpsIndex = (fpsIndex + 1) % fpsRates.length;
-    const currentFps = fpsRates[fpsIndex];
-    btnFpsToggle.textContent = `${currentFps} FPS`;
-    speedMs = Math.round(1000 / currentFps);
+  // --- Sequence Operations (Inferred Features) ---
+  function duplicateCurrentFrame() {
+    if (mediaList.length === 0) return;
+    const currentItem = mediaList[currentIndex];
+    const clone = {
+      type: currentItem.type,
+      url: currentItem.url,
+      texture: currentItem.texture,
+      name: `${currentItem.name} (Copia)`
+    };
+    mediaList.splice(currentIndex + 1, 0, clone);
+    renderAssetsGrid();
+    goToSlide(currentIndex + 1);
+  }
 
-    if (isPlaying && mediaList[currentIndex]?.type === 'image') {
-      clearInterval(playbackInterval);
-      playbackInterval = setInterval(nextSlide, speedMs);
+  function reverseSequence() {
+    if (mediaList.length <= 1) return;
+    mediaList.reverse();
+    renderAssetsGrid();
+    goToSlide(0);
+  }
+
+  function deleteCurrentFrame() {
+    if (mediaList.length === 0) return;
+    mediaList.splice(currentIndex, 1);
+    renderAssetsGrid();
+    if (mediaList.length === 0) {
+      goToSlide(-1);
+    } else {
+      goToSlide(Math.min(currentIndex, mediaList.length - 1));
     }
+  }
+
+  // --- CSS Filter & Adjustments Engine ---
+  function applyFilters() {
+    let filterStr = `brightness(${filterState.brightness}%) contrast(${filterState.contrast}%) saturate(${filterState.saturate}%)`;
+
+    if (filterState.preset === 'bw') filterStr += ' grayscale(100%)';
+    else if (filterState.preset === 'sepia') filterStr += ' sepia(90%)';
+    else if (filterState.preset === 'vivid') filterStr += ' saturate(180%)';
+    else if (filterState.preset === 'contrast') filterStr += ' contrast(160%)';
+
+    const canvas = canvasContainer.querySelector('canvas');
+    if (canvas) canvas.style.filter = filterStr;
+    if (videoOverlay) videoOverlay.style.filter = filterStr;
+  }
+
+  // Effect Presets Click
+  document.querySelectorAll('.effect-preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.effect-preset-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      filterState.preset = btn.dataset.filter;
+      applyFilters();
+    });
   });
 
-  // Transition Selector Change
-  selectTransition.addEventListener('change', (e) => {
-    transitionMode = e.target.value;
+  // Adjustment Sliders
+  document.getElementById('slider-brightness').addEventListener('input', (e) => {
+    filterState.brightness = e.target.value;
+    applyFilters();
+  });
+  document.getElementById('slider-contrast').addEventListener('input', (e) => {
+    filterState.contrast = e.target.value;
+    applyFilters();
+  });
+  document.getElementById('slider-saturate').addEventListener('input', (e) => {
+    filterState.saturate = e.target.value;
+    applyFilters();
   });
 
-  // Volume Slider Change
-  volumeSlider.addEventListener('input', (e) => {
-    if (videoOverlay) videoOverlay.volume = parseFloat(e.target.value);
+  // --- Brush Annotation Canvas ---
+  let isDrawing = false;
+  let ctx = null;
+
+  function initAnnotationCanvas() {
+    annotationCanvas.width = canvasContainer.clientWidth || window.innerWidth;
+    annotationCanvas.height = canvasContainer.clientHeight || window.innerHeight;
+    ctx = annotationCanvas.getContext('2d');
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+
+    annotationCanvas.addEventListener('mousedown', (e) => {
+      if (!annotationCanvas.classList.contains('active')) return;
+      isDrawing = true;
+      ctx.beginPath();
+      const rect = annotationCanvas.getBoundingClientRect();
+      ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    });
+
+    annotationCanvas.addEventListener('mousemove', (e) => {
+      if (!isDrawing) return;
+      const rect = annotationCanvas.getBoundingClientRect();
+      ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+      ctx.stroke();
+    });
+
+    annotationCanvas.addEventListener('mouseup', () => isDrawing = false);
+  }
+
+  function resizeAnnotationCanvas() {
+    if (!annotationCanvas) return;
+    annotationCanvas.width = canvasContainer.clientWidth || window.innerWidth;
+    annotationCanvas.height = canvasContainer.clientHeight || window.innerHeight;
+  }
+
+  // --- Header Menu Dropdowns ---
+  const navItems = ['menu-file', 'menu-edit', 'menu-project', 'menu-tools'];
+  navItems.forEach(id => {
+    const item = document.getElementById(id);
+    if (!item) return;
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const menu = item.querySelector('.dropdown-menu');
+      document.querySelectorAll('.dropdown-menu').forEach(m => {
+        if (m !== menu) m.classList.remove('open');
+      });
+      if (menu) menu.classList.toggle('open');
+    });
+  });
+
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.dropdown-menu').forEach(m => m.classList.remove('open'));
+  });
+
+  // Menu Items Click Handlers
+  document.getElementById('menu-item-duplicate')?.addEventListener('click', duplicateCurrentFrame);
+  document.getElementById('menu-item-reverse')?.addEventListener('click', reverseSequence);
+  document.getElementById('menu-item-delete')?.addEventListener('click', deleteCurrentFrame);
+  document.getElementById('tool-item-duplicate')?.addEventListener('click', duplicateCurrentFrame);
+  document.getElementById('tool-item-reverse')?.addEventListener('click', reverseSequence);
+  document.getElementById('menu-item-export')?.addEventListener('click', () => exportModal.classList.add('open'));
+  document.getElementById('menu-item-clear')?.addEventListener('click', () => {
+    mediaList.forEach(m => URL.revokeObjectURL(m.url));
+    mediaList = [];
+    renderAssetsGrid();
+    goToSlide(-1);
+  });
+
+  // Aspect Ratio Preset Items
+  document.getElementById('preset-16-9')?.addEventListener('click', () => {
+    currentAspectRatio = '16:9';
+    guideResLabel.textContent = 'Frame guide: 1920×1080';
+    if (mediaList[currentIndex]?.texture) fitAspect(mediaList[currentIndex].texture);
+  });
+  document.getElementById('preset-9-16')?.addEventListener('click', () => {
+    currentAspectRatio = '9:16';
+    guideResLabel.textContent = 'Frame guide: 1080×1920';
+    if (mediaList[currentIndex]?.texture) fitAspect(mediaList[currentIndex].texture);
+  });
+  document.getElementById('preset-1-1')?.addEventListener('click', () => {
+    currentAspectRatio = '1:1';
+    guideResLabel.textContent = 'Frame guide: 1080×1080';
+    if (mediaList[currentIndex]?.texture) fitAspect(mediaList[currentIndex].texture);
+  });
+  document.getElementById('preset-orig')?.addEventListener('click', () => {
+    currentAspectRatio = 'orig';
+    guideResLabel.textContent = 'Frame guide: Original';
+    if (mediaList[currentIndex]?.texture) fitAspect(mediaList[currentIndex].texture);
+  });
+
+  // --- Quick Tools & Left Strip Tool Buttons ---
+  const pillEffects = document.getElementById('pill-effects');
+  const pillAdjust = document.getElementById('pill-adjust');
+  const pillBrush = document.getElementById('pill-brush');
+  const pillCrop = document.getElementById('pill-crop');
+  const pillSelect = document.getElementById('pill-select');
+
+  pillEffects.addEventListener('click', () => {
+    panelEffects.classList.toggle('open');
+    panelAdjust.classList.remove('open');
+  });
+
+  pillAdjust.addEventListener('click', () => {
+    panelAdjust.classList.toggle('open');
+    panelEffects.classList.remove('open');
+  });
+
+  pillBrush.addEventListener('click', () => {
+    annotationCanvas.classList.toggle('active');
+    pillBrush.classList.toggle('active');
+  });
+
+  pillCrop.addEventListener('click', () => {
+    const ratios = ['16:9', '9:16', '1:1', 'orig'];
+    const idx = (ratios.indexOf(currentAspectRatio) + 1) % ratios.length;
+    currentAspectRatio = ratios[idx];
+    guideResLabel.textContent = `Frame guide: ${currentAspectRatio}`;
+    if (mediaList[currentIndex]?.texture) fitAspect(mediaList[currentIndex].texture);
+  });
+
+  document.getElementById('btn-tool-effects')?.addEventListener('click', () => pillEffects.click());
+  document.getElementById('btn-tool-adjust')?.addEventListener('click', () => pillAdjust.click());
+  document.getElementById('btn-tool-brush')?.addEventListener('click', () => pillBrush.click());
+  document.getElementById('btn-tool-crop')?.addEventListener('click', () => pillCrop.click());
+
+  // --- Export Modal Engine ---
+  btnExport.addEventListener('click', () => exportModal.classList.add('open'));
+  btnCloseExport.addEventListener('click', () => exportModal.classList.remove('open'));
+
+  btnConfirmExport.addEventListener('click', () => {
+    if (mediaList.length === 0) {
+      alert('Carga al menos un archivo antes de exportar.');
+      return;
+    }
+
+    btnConfirmExport.textContent = 'Exportando...';
+    btnConfirmExport.disabled = true;
+
+    setTimeout(() => {
+      // Create a downloadable WebM video file from the canvas stream
+      const canvas = canvasContainer.querySelector('canvas');
+      if (canvas) {
+        const stream = canvas.captureStream(24);
+        const recorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+        const chunks = [];
+
+        recorder.ondataavailable = (e) => chunks.push(e.data);
+        recorder.onstop = () => {
+          const blob = new Blob(chunks, { type: 'video/webm' });
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(blob);
+          a.download = 'Flipbook_Animacion_Pro.webm';
+          a.click();
+
+          btnConfirmExport.textContent = 'Compilar y Descargar';
+          btnConfirmExport.disabled = false;
+          exportModal.classList.remove('open');
+        };
+
+        recorder.start();
+        play();
+
+        // Record 3 seconds or full loop
+        setTimeout(() => {
+          pause();
+          recorder.stop();
+        }, Math.max(3000, mediaList.length * speedMs));
+      } else {
+        btnConfirmExport.textContent = 'Compilar y Descargar';
+        btnConfirmExport.disabled = false;
+        exportModal.classList.remove('open');
+      }
+    }, 500);
   });
 
   // --- File Processing ---
@@ -476,7 +728,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- Buttons Events ---
+  // --- Controls & Shortcuts ---
   btnPlay.addEventListener('click', togglePlay);
   btnStepNext.addEventListener('click', nextSlide);
   btnStepPrev.addEventListener('click', prevSlide);
@@ -486,12 +738,49 @@ document.addEventListener('DOMContentLoaded', () => {
     btnLoop.classList.toggle('active', isLoop);
   });
 
+  btnFpsToggle.addEventListener('click', () => {
+    fpsIndex = (fpsIndex + 1) % fpsRates.length;
+    const currentFps = fpsRates[fpsIndex];
+    btnFpsToggle.textContent = `${currentFps} FPS`;
+    speedMs = Math.round(1000 / currentFps);
+
+    if (isPlaying && mediaList[currentIndex]?.type === 'image') {
+      clearInterval(playbackInterval);
+      playbackInterval = setInterval(nextSlide, speedMs);
+    }
+  });
+
+  selectTransition.addEventListener('change', (e) => {
+    transitionMode = e.target.value;
+  });
+
+  volumeSlider.addEventListener('input', (e) => {
+    if (videoOverlay) videoOverlay.volume = parseFloat(e.target.value);
+  });
+
   // Keyboard Shortcuts
   document.addEventListener('keydown', (e) => {
     if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) return;
-    if (e.code === 'Space') { e.preventDefault(); togglePlay(); }
-    else if (e.code === 'ArrowRight') { e.preventDefault(); nextSlide(); }
-    else if (e.code === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
+
+    if (e.code === 'Space') {
+      e.preventDefault();
+      togglePlay();
+    } else if (e.code === 'ArrowRight') {
+      e.preventDefault();
+      nextSlide();
+    } else if (e.code === 'ArrowLeft') {
+      e.preventDefault();
+      prevSlide();
+    } else if (e.key === 'Delete' || e.key === 'Backspace') {
+      e.preventDefault();
+      deleteCurrentFrame();
+    } else if (e.ctrlKey && e.key.toLowerCase() === 'd') {
+      e.preventDefault();
+      duplicateCurrentFrame();
+    } else if (e.ctrlKey && e.key.toLowerCase() === 'r') {
+      e.preventDefault();
+      reverseSequence();
+    }
   });
 
   // Initialize
