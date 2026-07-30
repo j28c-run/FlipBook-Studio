@@ -5,6 +5,16 @@ Carga tus imágenes o videos directamente desde tu equipo y reprodúcelos como a
 
 ---
 
+## 🎨 Capturas de Pantalla
+
+### 1. Estado inicial (Stage listo para cargar medios)
+![Pantalla vacía con prompt de carga](./assets/preview-empty.png)
+
+### 2. Reproducción activa con Galería de Medios abierta
+![Vista con imágenes cargadas y panel lateral](./assets/preview-gallery.png)
+
+---
+
 ## ✨ Características
 
 | Función | Detalle |
@@ -26,60 +36,32 @@ Carga tus imágenes o videos directamente desde tu equipo y reprodúcelos como a
 
 ## 🚀 Cómo Usar
 
-1. **Descarga o clona el repositorio:**
+1. **Clona el repositorio:**
    ```bash
    git clone git@github.com:j28c-run/FlipBook-Studio.git
    ```
 
-2. **Abre el archivo principal directamente en tu navegador:**
+2. **Abre el archivo principal en tu navegador:**
    ```
-   dist/index.html
+   index.html
    ```
-   > No requiere servidor ni instalación. Funciona 100% offline en el navegador.
+   > No requiere servidor ni instalación. Funciona 100% en el navegador.
 
 3. **Carga tus archivos:**
-   - Haz clic en **"Galería de Medios"** en la esquina superior derecha.
-   - Arrastra tus imágenes o videos a la zona de carga, o haz clic para explorar.
+   - Haz clic en **"Galería de Medios"** en el header o arrastra tus imágenes al centro.
 
 4. **Reproduce:**
-   - Presiona **▶ Play** en la barra de controles o usa la tecla **Espacio**.
-   - Ajusta la velocidad con los presets de FPS (`24`, `10`, `5`, `1`).
-   - Cambia el efecto de transición desde el menú desplegable en el header.
-
----
-
-## 📂 Estructura del Proyecto
-
-```
-FlipBook-Studio/
-├── dist/
-│   ├── index.html      ← Aplicación principal
-│   ├── script.js       ← Motor WebGL + Lógica de reproducción
-│   └── style.css       ← Sistema de diseño Studio Pro
-├── .gitignore
-└── README.md
-```
-
----
-
-## 🎨 Capturas de Pantalla
-
-### Estado inicial (sin medios cargados)
-![Pantalla vacía con prompt de carga](https://i.imgur.com/placeholder-empty.png)
-
-### Reproducción con galería de medios abierta
-![Vista con imágenes cargadas y panel lateral](https://i.imgur.com/placeholder-gallery.png)
-
-> 💡 **Tip:** Puedes arrastrar archivos directamente sobre el área de visualización sin necesidad de abrir el panel lateral.
+   - Presiona **▶ Play** o pulsa la tecla **Espacio**.
+   - Elige la velocidad (`24 FPS`, `10 FPS`, `5 FPS`, `1 FPS`) y la transición (Instantánea, Fade, WebGL Líquida).
 
 ---
 
 ## 🛠️ Tecnologías
 
 - **HTML5** + **CSS3** (Variables CSS, Grid, Flexbox, Glassmorphism)
-- **JavaScript** ES6+ (sin frameworks)
-- **[Three.js r83](https://threejs.org/)** — Motor 3D WebGL con Shaders GLSL personalizados
-- **[GSAP 1.20](https://greensock.com/gsap/)** — Animaciones de transición suaves (TweenMax)
+- **JavaScript** ES6+
+- **[Three.js r83](https://threejs.org/)** — Motor 3D WebGL con Shaders GLSL
+- **[GSAP 1.20](https://greensock.com/gsap/)** — Transiciones suaves
 - **Google Fonts** — Tipografía *Inter*
 
 ---
