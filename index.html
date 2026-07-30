@@ -8,144 +8,185 @@
 </head>
 <body>
 
-  <div class="app-container">
-    <!-- Studio Header -->
-    <header class="studio-header">
-      <div class="brand-section">
-        <div class="brand-logo">FS</div>
-        <span class="brand-name">Flipbook Studio</span>
-        <span class="brand-badge">PRO v2.5</span>
+  <div class="studio-window">
+    <!-- Top App Header Bar -->
+    <header class="window-header">
+      <div class="brand-group">
+        <div class="brand-icon">FS</div>
+        <span class="brand-title">Flipbook Studio Pro</span>
+
+        <nav class="menu-nav">
+          <span class="menu-nav-item">File</span>
+          <span class="menu-nav-item">Edit</span>
+          <span class="menu-nav-item">Project</span>
+          <span class="menu-nav-item">Tools</span>
+          <span class="menu-nav-item">View</span>
+          <span class="menu-nav-item">Help</span>
+        </nav>
       </div>
 
-      <div class="header-actions">
-        <!-- Transition Option Dropdown (Opcional) -->
-        <div class="option-group">
-          <span class="option-label">Transición:</span>
-          <select id="select-transition" class="select-input">
-            <option value="instant">⚡ Corte Normal / Instantáneo</option>
-            <option value="fade">✨ Fundido Suave (Fade)</option>
-            <option value="liquid">🌊 Onda WebGL 3D (Líquida)</option>
+      <div class="header-right">
+        <!-- Transition Selector -->
+        <div class="transition-selector-wrap">
+          <span class="transition-label">Transición:</span>
+          <select id="select-transition" class="transition-select">
+            <option value="instant">⚡ Instant Cut (Corte)</option>
+            <option value="fade">✨ Dissolve (Fade)</option>
+            <option value="liquid">🌊 WebGL Wave (Líquida)</option>
           </select>
         </div>
 
-        <button class="btn-sidebar-toggle" id="btn-toggle-sidebar">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 6h16M4 12h16M4 18h16"/>
-          </svg>
-          <span>Galería de Medios</span>
-        </button>
+        <button class="btn-export" id="btn-export">Exportar</button>
       </div>
     </header>
 
-    <!-- Main Body Area -->
-    <div class="studio-body">
-      <!-- Main Stage Viewport -->
-      <main class="viewport-stage" id="viewport-stage">
-        <div class="stage-canvas-area">
+    <!-- Studio Main Workspace Body -->
+    <div class="studio-workspace">
+      <!-- Left Tools Strip Toolbar -->
+      <aside class="tools-strip">
+        <button class="tool-btn active" title="Selección">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 3l7 18 3-7 7-3L3 3z"/></svg>
+        </button>
+        <button class="tool-btn" title="Recorte">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M6 2v14a2 2 0 002 2h14M18 22V8a2 2 0 00-2-2H2"/></svg>
+        </button>
+        <button class="tool-btn" title="Pincel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 19l7-7 3 3-7 7-3-3zM18 13l-1.5-1.5M2 22l5-1 10-10-4-4L3 17l-1 5z"/></svg>
+        </button>
+        <button class="tool-btn" title="Efectos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        </button>
+        <button class="tool-btn" title="Ajustes">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M4 21v-7m0-4V3m8 18v-9m0-4V3m8 18v-5m0-4V3M1 14h6m2-6h6m2 8h6"/></svg>
+        </button>
+      </aside>
+
+      <!-- Center Stage Area -->
+      <main class="stage-area">
+        <div class="stage-viewport" id="stage-viewport">
           <div id="canvas-container"></div>
           <video id="video-overlay" playsinline></video>
 
-          <!-- Empty State Prompt -->
-          <div class="empty-stage-card" id="empty-stage-prompt">
-            <div class="empty-icon-wrapper">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          <!-- Framing Corner Handles -->
+          <div class="frame-guides" id="frame-guides">
+            <div class="frame-corner top-left"></div>
+            <div class="frame-corner top-right"></div>
+            <div class="frame-corner bottom-left"></div>
+            <div class="frame-corner bottom-right"></div>
+          </div>
+
+          <div class="frame-guide-info">
+            <span>Frame guide: 1920×1080</span>
+            <span id="guide-frame-counter">Frame: 0 / 0</span>
+          </div>
+
+          <!-- Glassmorphism Upload Modal when Empty -->
+          <div class="empty-glass-modal" id="empty-glass-modal">
+            <div class="upload-icon-circle">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
               </svg>
             </div>
             <h3>Empieza cargando tus archivos</h3>
-            <p>Sube secuencias de imágenes o videos para reproducirlos como animación Flipbook con transiciones configurables.</p>
-            <button class="btn-upload-primary" onclick="document.getElementById('file-input').click()">Cargar Imágenes / Videos</button>
+            <button class="btn-glass-add" onclick="document.getElementById('file-input').click()">Añadir Archivo +</button>
+            <input type="file" id="file-input" multiple accept="image/*,video/*" style="display:none;" />
           </div>
         </div>
 
-        <!-- Studio Timeline & Controls Dock -->
-        <div class="studio-dock" id="studio-dock" style="display: none;">
-          <!-- Timeline Scrubber Bar -->
-          <div class="timeline-bar-wrapper">
-            <span class="time-code" id="time-code">00:01</span>
-            <div class="timeline-track" id="timeline-track">
-              <div class="timeline-progress" id="timeline-progress"></div>
-            </div>
-            <span class="time-code" id="frame-counter" style="text-align: right;">1 / 1</span>
-          </div>
-
-          <!-- Player Toolbar Row -->
-          <div class="dock-toolbar">
-            <!-- Navigation Buttons -->
-            <div class="toolbar-group">
-              <button class="btn-dock-icon" id="btn-step-prev" title="Fotograma Anterior (Flecha Izquierda)">
-                <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
-              </button>
-              
-              <button class="btn-dock-icon btn-play-main" id="btn-play" title="Reproducir / Pausar (Espacio)">
-                <svg viewBox="0 0 24 24" id="play-icon"><path d="M8 5v14l11-7z"/></svg>
-              </button>
-              
-              <button class="btn-dock-icon" id="btn-stop" title="Detener">
-                <svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>
-              </button>
-              
-              <button class="btn-dock-icon" id="btn-step-next" title="Fotograma Siguiente (Flecha Derecha)">
-                <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
-              </button>
-            </div>
-
-            <!-- Speed Preset Pills -->
-            <div class="toolbar-group">
-              <span class="option-label">Velocidad:</span>
-              <div class="speed-pills">
-                <button class="speed-pill" data-fps="24">24 FPS</button>
-                <button class="speed-pill active" data-fps="10">10 FPS</button>
-                <button class="speed-pill" data-fps="5">5 FPS</button>
-                <button class="speed-pill" data-fps="1">1 FPS</button>
-              </div>
-            </div>
-
-            <!-- Loop & Fullscreen Tools -->
-            <div class="toolbar-group">
-              <button class="btn-dock-icon active" id="btn-loop" title="Repetir en Bucle">
-                <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
-              </button>
-              <button class="btn-dock-icon" id="btn-fullscreen" title="Pantalla Completa">
-                <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
-              </button>
-            </div>
-          </div>
+        <!-- Quick Tools Bar below Canvas -->
+        <div class="canvas-quick-tools">
+          <button class="quick-tool-pill active">Selection</button>
+          <button class="quick-tool-pill">Crop</button>
+          <button class="quick-tool-pill">Brush</button>
+          <button class="quick-tool-pill">Effects</button>
+          <button class="quick-tool-pill">Adjust</button>
+          <button class="quick-tool-pill">Properties ▾</button>
         </div>
       </main>
 
-      <!-- Sidebar Gallery Drawer -->
-      <aside class="studio-sidebar" id="studio-sidebar">
-        <div class="sidebar-header">
-          <span class="sidebar-title">Medios Cargados</span>
-          <button class="btn-text-action" id="btn-clear-playlist">Limpiar Todo</button>
+      <!-- Right Sidebar: Library / Assets Grid -->
+      <aside class="assets-sidebar">
+        <div class="sidebar-header-bar">
+          <span class="sidebar-title-text">Library / Assets</span>
+          <button class="sidebar-close-btn">&times;</button>
         </div>
 
-        <div class="sidebar-body">
-          <!-- Dropzone -->
-          <div class="sidebar-dropzone" id="sidebar-dropzone">
-            <svg class="dropzone-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-            </svg>
-            <div class="dropzone-text">
-              <strong>Arrastra archivos aquí</strong><br>
-              o haz clic para examinar
-            </div>
-            <input type="file" id="file-input" multiple accept="image/*,video/*" style="display:none;" />
-          </div>
+        <div class="folder-selector-bar">
+          📁 <span>Archivos_Animación</span> ▾
+        </div>
 
-          <!-- Items List -->
-          <div class="media-items-list" id="media-items-list">
-            <!-- Rendered by JS -->
+        <!-- Drag & Drop Zone -->
+        <div class="grid-dropzone" id="grid-dropzone">
+          <div class="grid-dropzone-text">
+            <strong>+ Arrastrar archivos</strong>
           </div>
+        </div>
+
+        <!-- 2-Column Grid Asset List -->
+        <div class="assets-grid-container" id="assets-grid">
+          <!-- Dynamically filled by JS -->
         </div>
       </aside>
     </div>
+
+    <!-- Bottom Timeline Scrubber Area -->
+    <footer class="timeline-dock">
+      <!-- Active Frame Floating Counter Badge -->
+      <div class="active-frame-badge-wrap" id="active-frame-badge-wrap" style="display: none;">
+        <span class="badge-frame-num" id="badge-frame-num">1 / 12</span>
+        <span class="badge-frame-sub">Active Frame</span>
+      </div>
+
+      <!-- Scrubber Track & Rule Ticks -->
+      <div class="scrubber-track-container">
+        <div class="ruler-ticks-row">
+          <span>0</span><span>5</span><span>10</span><span>15</span><span>20</span><span>25</span><span>30</span><span>35</span><span>40</span><span>45</span><span>50</span><span>55</span><span>60</span>
+        </div>
+        <div class="scrubber-track" id="scrubber-track">
+          <div class="scrubber-progress" id="scrubber-progress">
+            <div class="scrub-needle-head" id="scrub-needle"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Control Dock Row -->
+      <div class="control-dock-row">
+        <div class="controls-left">
+          <button class="btn-fps-pill" id="btn-fps-toggle">24 FPS</button>
+        </div>
+
+        <div class="controls-center">
+          <button class="control-icon-btn" id="btn-step-prev" title="Anterior">
+            <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+          </button>
+          
+          <button class="control-icon-btn btn-play-center" id="btn-play" title="Reproducir / Pausar (Espacio)">
+            <svg viewBox="0 0 24 24" id="play-icon-path"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          
+          <button class="control-icon-btn" id="btn-step-next" title="Siguiente">
+            <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z"/></svg>
+          </button>
+          
+          <button class="control-icon-btn" id="btn-loop" title="Bucle">
+            <svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+          </button>
+        </div>
+
+        <div class="controls-right">
+          <div class="volume-slider-wrap">
+            <span>🔊</span>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="1" />
+          </div>
+        </div>
+      </div>
+    </footer>
   </div>
 
   <!-- Required WebGL & GSAP Libraries -->
   <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r83/three.js'></script>
   <script src='https://cdnjs.cloudflare.com/ajax/libs/gsap/1.20.4/TweenMax.min.js'></script>
   <script src="./script.js"></script>
+
 </body>
 </html>

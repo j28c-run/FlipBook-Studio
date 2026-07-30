@@ -1,10 +1,10 @@
 /**
- * Flipbook Studio Pro v2 Engine
+ * Flipbook Studio Pro Engine
  */
 
 document.addEventListener('DOMContentLoaded', () => {
 
-  // --- GLSL Shaders ---
+  // --- GLSL Shaders for Optional WebGL Wave Effect ---
   const vertexShader = `
     varying vec2 vUv;
     void main() {
@@ -35,53 +35,53 @@ document.addEventListener('DOMContentLoaded', () => {
   `;
 
   // --- State ---
-  let mediaList = []; // Array of { type: 'image'|'video', url, texture, name }
+  let mediaList = []; // Array of { type: 'image'|'video', url, texture, name, format, size }
   let currentIndex = 0;
   let isAnimating = false;
   let isPlaying = false;
   let playbackInterval = null;
-  let fpsRates = [24, 12, 5, 1];
-  let fpsIndex = 0; // Starts at 24 FPS
-  let speedMs = Math.round(1000 / 24);
+  let speedMs = 100; // Default 10 FPS (100ms)
   let isLoop = true;
   let transitionMode = 'instant'; // 'instant' | 'fade' | 'liquid'
 
   // --- DOM Elements ---
   const canvasContainer = document.getElementById('canvas-container');
   const videoOverlay = document.getElementById('video-overlay');
-  const emptyGlassModal = document.getElementById('empty-glass-modal');
-  const activeFrameBadgeWrap = document.getElementById('active-frame-badge-wrap');
-  const badgeFrameNum = document.getElementById('badge-frame-num');
-  const guideFrameCounter = document.getElementById('guide-frame-counter');
+  const emptyStagePrompt = document.getElementById('empty-stage-prompt');
+  const studioDock = document.getElementById('studio-dock');
   const selectTransition = document.getElementById('select-transition');
 
-  const scrubberTrack = document.getElementById('scrubber-track');
-  const scrubberProgress = document.getElementById('scrubber-progress');
-  const scrubNeedle = document.getElementById('scrub-needle');
+  const timelineTrack = document.getElementById('timeline-track');
+  const timelineProgress = document.getElementById('timeline-progress');
+  const timeCode = document.getElementById('time-code');
+  const frameCounter = document.getElementById('frame-counter');
 
   const btnPlay = document.getElementById('btn-play');
-  const playIconPath = document.getElementById('play-icon-path');
+  const playIcon = document.getElementById('play-icon');
+  const btnStop = document.getElementById('btn-stop');
   const btnStepPrev = document.getElementById('btn-step-prev');
   const btnStepNext = document.getElementById('btn-step-next');
   const btnLoop = document.getElementById('btn-loop');
-  const btnFpsToggle = document.getElementById('btn-fps-toggle');
-  const volumeSlider = document.getElementById('volume-slider');
+  const btnFullscreen = document.getElementById('btn-fullscreen');
+  const speedPills = document.querySelectorAll('.speed-pill');
 
-  const gridDropzone = document.getElementById('grid-dropzone');
+  const btnToggleSidebar = document.getElementById('btn-toggle-sidebar');
+  const studioSidebar = document.getElementById('studio-sidebar');
+  const sidebarDropzone = document.getElementById('sidebar-dropzone');
   const fileInput = document.getElementById('file-input');
-  const assetsGrid = document.getElementById('assets-grid');
+  const mediaItemsList = document.getElementById('media-items-list');
+  const btnClearPlaylist = document.getElementById('btn-clear-playlist');
 
-  // --- Three.js Setup ---
+  // --- WebGL Engine Setup ---
   let scene, camera, renderer, mat, geometry, object;
 
   function initWebGL() {
-    const container = document.getElementById('stage-viewport');
-    const w = container.clientWidth || window.innerWidth;
-    const h = container.clientHeight || window.innerHeight;
+    const w = canvasContainer.clientWidth || window.innerWidth;
+    const h = canvasContainer.clientHeight || window.innerHeight;
 
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.setClearColor(0x090d16, 1.0);
+    renderer.setClearColor(0x04070d, 1.0);
     renderer.setSize(w, h);
     canvasContainer.appendChild(renderer.domElement);
 
@@ -112,8 +112,8 @@ document.addEventListener('DOMContentLoaded', () => {
     renderLoop();
 
     window.addEventListener('resize', () => {
-      const nw = container.clientWidth || window.innerWidth;
-      const nh = container.clientHeight || window.innerHeight;
+      const nw = canvasContainer.clientWidth || window.innerWidth;
+      const nh = canvasContainer.clientHeight || window.innerHeight;
       renderer.setSize(nw, nh);
       camera.left = nw / -2;
       camera.right = nw / 2;
@@ -130,9 +130,8 @@ document.addEventListener('DOMContentLoaded', () => {
   // Preserve Image Aspect Ratio
   function fitAspect(texture) {
     if (!texture || !texture.image) return;
-    const container = document.getElementById('stage-viewport');
-    const containerW = container.clientWidth || window.innerWidth;
-    const containerH = container.clientHeight || window.innerHeight;
+    const containerW = canvasContainer.clientWidth || window.innerWidth;
+    const containerH = canvasContainer.clientHeight || window.innerHeight;
 
     const imgW = texture.image.width || containerW;
     const imgH = texture.image.height || containerH;
@@ -141,11 +140,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     let planeW, planeH;
     if (imgAspect > containerAspect) {
-      planeW = containerW * 0.88;
-      planeH = (containerW * 0.88) / imgAspect;
+      planeW = containerW * 0.92;
+      planeH = (containerW * 0.92) / imgAspect;
     } else {
-      planeH = containerH * 0.84;
-      planeW = (containerH * 0.84) * imgAspect;
+      planeH = containerH * 0.88;
+      planeW = (containerH * 0.88) * imgAspect;
     }
 
     object.geometry.dispose();
@@ -155,14 +154,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Slide Transition Engine ---
   function goToSlide(targetIndex) {
     if (mediaList.length === 0) {
-      emptyGlassModal.style.display = 'block';
-      activeFrameBadgeWrap.style.display = 'none';
-      guideFrameCounter.textContent = 'Frame: 0 / 0';
+      emptyStagePrompt.style.display = 'block';
+      studioDock.style.display = 'none';
       return;
     }
 
-    emptyGlassModal.style.display = 'none';
-    activeFrameBadgeWrap.style.display = 'flex';
+    emptyStagePrompt.style.display = 'none';
+    studioDock.style.display = 'flex';
 
     if (targetIndex < 0) targetIndex = 0;
     if (targetIndex >= mediaList.length) targetIndex = mediaList.length - 1;
@@ -173,7 +171,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (nextMedia.type === 'video') {
       videoOverlay.src = nextMedia.url;
       videoOverlay.style.display = 'block';
-      videoOverlay.volume = parseFloat(volumeSlider.value);
       if (isPlaying) videoOverlay.play();
 
       videoOverlay.onended = () => {
@@ -217,7 +214,7 @@ document.addEventListener('DOMContentLoaded', () => {
       mat.uniforms.nextImage.value = nextMedia.texture;
       mat.uniforms.nextImage.needsUpdate = true;
 
-      TweenLite.to(mat.uniforms.dispFactor, 0.4, {
+      TweenLite.to(mat.uniforms.dispFactor, 0.5, {
         value: 1.0,
         ease: 'Expo.easeInOut',
         onComplete: function () {
@@ -233,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
       mat.uniforms.nextImage.value = nextMedia.texture;
       mat.uniforms.nextImage.needsUpdate = true;
 
-      TweenLite.to(mat.uniforms.dispFactor, 0.25, {
+      TweenLite.to(mat.uniforms.dispFactor, 0.3, {
         value: 1.0,
         ease: 'Linear.easeNone',
         onComplete: function () {
@@ -250,46 +247,38 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateUI() {
-    badgeFrameNum.textContent = `${currentIndex + 1} / ${mediaList.length}`;
-    guideFrameCounter.textContent = `Frame: ${currentIndex + 1} / ${mediaList.length}`;
-
+    frameCounter.textContent = `${currentIndex + 1} / ${mediaList.length}`;
+    
     // Timeline Progress percentage
     const progressPct = mediaList.length > 1 ? (currentIndex / (mediaList.length - 1)) * 100 : 100;
-    scrubberProgress.style.width = `${progressPct}%`;
+    timelineProgress.style.width = `${progressPct}%`;
 
-    updateActiveGridCard();
+    // Time Code Display
+    const currentSecs = Math.floor((currentIndex * speedMs) / 1000);
+    const mins = String(Math.floor(currentSecs / 60)).padStart(2, '0');
+    const secs = String(currentSecs % 60).padStart(2, '0');
+    timeCode.textContent = `${mins}:${secs}`;
+
+    updateActivePlaylist();
   }
 
-  // --- Scrubber Track Interactive Dragging ---
-  let isDraggingScrubber = false;
-
-  function seekScrubber(e) {
+  // --- Timeline Scrubber Click & Drag ---
+  function seekTimeline(e) {
     if (mediaList.length <= 1) return;
-    const rect = scrubberTrack.getBoundingClientRect();
+    const rect = timelineTrack.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const ratio = Math.max(0, Math.min(1, clickX / rect.width));
     const targetIdx = Math.round(ratio * (mediaList.length - 1));
     goToSlide(targetIdx);
   }
 
-  scrubberTrack.addEventListener('mousedown', (e) => {
-    isDraggingScrubber = true;
-    seekScrubber(e);
-  });
+  timelineTrack.addEventListener('click', seekTimeline);
 
-  window.addEventListener('mousemove', (e) => {
-    if (isDraggingScrubber) seekScrubber(e);
-  });
-
-  window.addEventListener('mouseup', () => {
-    isDraggingScrubber = false;
-  });
-
-  // --- Playback Controls ---
+  // --- Playback Engine ---
   function play() {
     if (mediaList.length === 0) return;
     isPlaying = true;
-    playIconPath.setAttribute('d', 'M6 19h4V5H6v14zm8-14v14h4V5h-4z'); // Pause SVG
+    playIcon.innerHTML = '<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>'; // Pause SVG
 
     const currentMedia = mediaList[currentIndex];
     if (currentMedia.type === 'video') {
@@ -302,13 +291,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function pause() {
     isPlaying = false;
-    playIconPath.setAttribute('d', 'M8 5v14l11-7z'); // Play SVG
+    playIcon.innerHTML = '<path d="M8 5v14l11-7z"/>'; // Play SVG
     clearInterval(playbackInterval);
     if (videoOverlay) videoOverlay.pause();
   }
 
   function togglePlay() {
     if (isPlaying) pause(); else play();
+  }
+
+  function stop() {
+    pause();
+    goToSlide(0);
   }
 
   function nextSlide() {
@@ -327,27 +321,24 @@ document.addEventListener('DOMContentLoaded', () => {
     goToSlide(prevIdx);
   }
 
-  // FPS Rate Toggle Button
-  btnFpsToggle.addEventListener('click', () => {
-    fpsIndex = (fpsIndex + 1) % fpsRates.length;
-    const currentFps = fpsRates[fpsIndex];
-    btnFpsToggle.textContent = `${currentFps} FPS`;
-    speedMs = Math.round(1000 / currentFps);
+  // --- Speed Presets ---
+  speedPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      speedPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      const fps = parseInt(pill.dataset.fps, 10);
+      speedMs = Math.round(1000 / fps);
 
-    if (isPlaying && mediaList[currentIndex]?.type === 'image') {
-      clearInterval(playbackInterval);
-      playbackInterval = setInterval(nextSlide, speedMs);
-    }
+      if (isPlaying && mediaList[currentIndex]?.type === 'image') {
+        clearInterval(playbackInterval);
+        playbackInterval = setInterval(nextSlide, speedMs);
+      }
+    });
   });
 
-  // Transition Selector Change
+  // --- Transition Option Selector ---
   selectTransition.addEventListener('change', (e) => {
     transitionMode = e.target.value;
-  });
-
-  // Volume Slider Change
-  volumeSlider.addEventListener('input', (e) => {
-    if (videoOverlay) videoOverlay.volume = parseFloat(e.target.value);
   });
 
   // --- File Processing ---
@@ -358,13 +349,15 @@ document.addEventListener('DOMContentLoaded', () => {
     Array.from(files).forEach((file) => {
       const isVideo = file.type.startsWith('video/');
       const url = URL.createObjectURL(file);
+      const ext = file.name.split('.').pop().toUpperCase();
 
       if (isVideo) {
         mediaList.push({
           type: 'video',
           url: url,
           texture: null,
-          name: file.name
+          name: file.name,
+          format: ext
         });
         addedCount++;
       } else if (file.type.startsWith('image/')) {
@@ -391,72 +384,87 @@ document.addEventListener('DOMContentLoaded', () => {
           type: 'image',
           url: url,
           texture: null,
-          name: file.name
+          name: file.name,
+          format: ext
         });
         addedCount++;
       }
     });
 
     if (addedCount > 0) {
-      renderAssetsGrid();
+      renderPlaylist();
       const firstNewIndex = mediaList.length - addedCount;
       goToSlide(firstNewIndex);
     }
   }
 
-  // Dropzone Event Listeners
-  gridDropzone.addEventListener('click', () => fileInput.click());
+  // Dropzone Handlers
+  sidebarDropzone.addEventListener('click', () => fileInput.click());
   fileInput.addEventListener('change', (e) => processFiles(e.target.files));
 
-  gridDropzone.addEventListener('dragover', (e) => {
+  sidebarDropzone.addEventListener('dragover', (e) => {
     e.preventDefault();
-    gridDropzone.classList.add('dragover');
+    sidebarDropzone.classList.add('dragover');
   });
 
-  gridDropzone.addEventListener('dragleave', () => gridDropzone.classList.remove('dragover'));
+  sidebarDropzone.addEventListener('dragleave', () => sidebarDropzone.classList.remove('dragover'));
 
-  gridDropzone.addEventListener('drop', (e) => {
+  sidebarDropzone.addEventListener('drop', (e) => {
     e.preventDefault();
-    gridDropzone.classList.remove('dragover');
+    sidebarDropzone.classList.remove('dragover');
     processFiles(e.dataTransfer.files);
   });
 
-  // Global Drag & Drop on Stage
-  document.getElementById('stage-viewport').addEventListener('dragover', (e) => e.preventDefault());
-  document.getElementById('stage-viewport').addEventListener('drop', (e) => {
+  // Global Drag & Drop on Viewport
+  document.getElementById('viewport-stage').addEventListener('dragover', (e) => e.preventDefault());
+  document.getElementById('viewport-stage').addEventListener('drop', (e) => {
     e.preventDefault();
     processFiles(e.dataTransfer.files);
   });
 
-  // --- Render 2-Column Assets Grid Cards ---
-  function renderAssetsGrid() {
-    assetsGrid.innerHTML = '';
+  // --- Playlist Renderer ---
+  function renderPlaylist() {
+    mediaItemsList.innerHTML = '';
+
+    if (mediaList.length === 0) {
+      mediaItemsList.innerHTML = `
+        <div class="sidebar-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>
+          </svg>
+          <p>Sin archivos cargados.<br/>Arrastra o haz clic en la zona de arriba.</p>
+        </div>
+      `;
+      return;
+    }
+
     mediaList.forEach((item, idx) => {
       const card = document.createElement('div');
-      card.className = `asset-card ${idx === currentIndex ? 'active' : ''}`;
+      card.className = `media-item-card ${idx === currentIndex ? 'active' : ''}`;
 
-      const thumbHtml = item.type === 'image'
-        ? `<img src="${item.url}" alt="Frame ${idx + 1}" />`
-        : `<video src="${item.url}"></video>`;
+      const thumb = item.type === 'image'
+        ? `<img src="${item.url}" class="item-thumb" />`
+        : `<video src="${item.url}" class="item-thumb"></video>`;
 
       card.innerHTML = `
-        <div class="asset-thumb-wrap">
-          ${thumbHtml}
+        ${thumb}
+        <div class="item-details">
+          <div class="item-name">${item.name}</div>
+          <div class="item-badge">${item.format} • ${item.type === 'image' ? 'IMAGEN' : 'VIDEO'}</div>
         </div>
-        <div class="asset-card-title">Frame ${idx + 1}</div>
-        <button class="btn-card-del" title="Eliminar">&times;</button>
+        <button class="btn-item-delete" title="Eliminar">&times;</button>
       `;
 
       card.addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn-card-del')) return;
+        if (e.target.classList.contains('btn-item-delete')) return;
         goToSlide(idx);
       });
 
-      card.querySelector('.btn-card-del').addEventListener('click', (e) => {
+      card.querySelector('.btn-item-delete').addEventListener('click', (e) => {
         e.stopPropagation();
         URL.revokeObjectURL(item.url);
         mediaList.splice(idx, 1);
-        renderAssetsGrid();
+        renderPlaylist();
 
         if (mediaList.length === 0) {
           goToSlide(-1);
@@ -465,25 +473,46 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       });
 
-      assetsGrid.appendChild(card);
+      mediaItemsList.appendChild(card);
     });
   }
 
-  function updateActiveGridCard() {
-    const cards = assetsGrid.querySelectorAll('.asset-card');
+  function updateActivePlaylist() {
+    const cards = mediaItemsList.querySelectorAll('.media-item-card');
     cards.forEach((card, idx) => {
       card.classList.toggle('active', idx === currentIndex);
     });
   }
 
-  // --- Buttons Events ---
+  btnClearPlaylist.addEventListener('click', () => {
+    mediaList.forEach(m => URL.revokeObjectURL(m.url));
+    mediaList = [];
+    currentIndex = 0;
+    renderPlaylist();
+    goToSlide(-1);
+  });
+
+  // --- Buttons & Controls ---
   btnPlay.addEventListener('click', togglePlay);
+  btnStop.addEventListener('click', stop);
   btnStepNext.addEventListener('click', nextSlide);
   btnStepPrev.addEventListener('click', prevSlide);
 
   btnLoop.addEventListener('click', () => {
     isLoop = !isLoop;
     btnLoop.classList.toggle('active', isLoop);
+  });
+
+  btnFullscreen.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+    }
+  });
+
+  btnToggleSidebar.addEventListener('click', () => {
+    studioSidebar.classList.toggle('collapsed');
   });
 
   // Keyboard Shortcuts
@@ -494,6 +523,6 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (e.code === 'ArrowLeft') { e.preventDefault(); prevSlide(); }
   });
 
-  // Initialize
+  // Init
   initWebGL();
 });
